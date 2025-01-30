@@ -28,23 +28,20 @@ const config = {
 		'https://partners.unifi.my/HSBBPartnerPortal/HSBBPartnerPortal.portal?_nfpb=true&_pageLabel=login_portal&_nfls=false',
 };
 
-// Solve captcha
+// Solve the captcha
 const solveCaptcha = async () => {
-	const captcha = fs.readFileSync('captcha.png', { encoding: 'base64' });
+	try {
+		const captcha = fs.readFileSync('captcha.png', { encoding: 'base64' });
 
-	// Additional flags, see documentation description
-	// ac.settings.phrase = true;                  // 2 words
-	// ac.settings.case = true;                    // case sensitivity
-	// ac.settings.numeric = 1;                    // only numbers
-	// ac.settings.comment = "only green letters"; // text comment for workers
-	// ac.settings.math = true;                    // math operation like 50+2
-	// ac.settings.minLength = 1;                  // minimum amount of characters
-	// ac.settings.maxLength = 10;                 // maximum number of characters
-	// ac.settings.languagePool = 'en';            // language pool
+		// Keep your settings
+		ac.settings.numeric = 2;
 
-	ac.solveImage(captcha, true)
-		.then((text) => console.log('captcha text: ' + text))
-		.catch((error) => console.log('test received error ' + error));
+		// Await the result
+		const text = await ac.solveImage(captcha, true);
+		return { success: true, text };
+	} catch (error) {
+		return { success: false, error: error.message };
+	}
 };
 
 async function scrapeUnifiPortal() {
@@ -72,7 +69,7 @@ async function scrapeUnifiPortal() {
 		);
 		await page.fill(
 			'#portal\\.actionForm_password',
-			process.env.UNIFI_USERPASSWORD
+			process.env.UNIFI_PASSWORD
 		);
 
 		// Wait for the image element to be available
@@ -89,16 +86,25 @@ async function scrapeUnifiPortal() {
 			console.error('Captcha image element not found');
 		}
 
-		//
+		// Usage:
+		const result = await solveCaptcha();
+		if (result.success) {
+			console.log('Captcha solved:', result.text);
+		} else {
+			console.log('Error:', result.error);
+		}
 
-		// // Click the login button
-		// await page.click('input[type="submit"]');
+		await page.fill(
+			'#portal\\.actionForm_captchaCode',
+			result.text.toUpperCase()
+		);
 
-		// // Wait for navigation after login
-		// await page.waitForNavigation();
+		// login
+		const loginButton = await page.$(
+			`xpath=//*[@id="portal.form"]/table/tbody/tr[8]/td[2]/input`
+		);
+		await loginButton.click();
 
-		// // You can add more scraping logic here after successful login
-		// const content = await page.content();
 		console.log('Successfully logged in');
 
 		return content;
