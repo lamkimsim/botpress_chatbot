@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const sdk = __importStar(require("@botpress/sdk"));
 const bp = __importStar(require(".botpress"));
+const puppeteer = require('puppeteer');
 exports.default = new bp.Integration({
     register: async () => {
         /**
@@ -51,15 +52,12 @@ exports.default = new bp.Integration({
         throw new sdk.RuntimeError('Invalid configuration'); // replace this with your own validation logic
     },
     actions: {
-        helloWorld: async (props) => {
-            /**
-             * This is called when a bot calls the action `helloWorld`.
-             */
-            props.logger.forBot().info('Hello World!'); // this log will be visible by the bots that use this integration
-            let { name } = props.input;
-            name = name || 'World';
-            return { message: `Hello "${name}"! Nice to meet you ;)` };
-        },
+        validateAddress: async ({ input }) => {
+            const { address } = input;
+            // Randomize between true and false
+            const portAvailable = Math.random() >= 0.5;
+            return { validatedAddress: address, portAvailable: portAvailable };
+        }
     },
     channels: {},
     handler: async () => { },

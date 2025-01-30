@@ -1,5 +1,6 @@
 import * as sdk from '@botpress/sdk'
 import * as bp from '.botpress'
+const puppeteer = require('puppeteer');
 
 export default new bp.Integration({
   register: async () => {
@@ -18,11 +19,14 @@ export default new bp.Integration({
   },
   actions: {
     validateAddress: async ({input}) => {
+
+    
       const { address } = input
 
+  
       // Randomize between true and false
       const portAvailable = Math.random() >= 0.5
-      
+
       return { validatedAddress: address, portAvailable: portAvailable }
       
     }

@@ -22,28 +22,21 @@ exports.default = new sdk_1.IntegrationDefinition({
                 }),
             },
         },
-        createTrackableLink: {
-            title: 'Create Trackable Link',
-            description: 'Takes a link as an input and returns a link that notifies the author when the link is clicked.',
+        validateAddress: {
+            title: 'Validate Address',
+            description: 'Check user address from unifi portal',
             input: {
                 schema: sdk_1.z.object({
                     conversationId: sdk_1.z.string().describe('ID of the conversation'),
-                    originalLink: sdk_1.z.string().describe('URL of the link to be tracked'),
+                    address: sdk_1.z.string().describe('Address to be validated'),
                 }),
             },
             output: {
                 schema: sdk_1.z.object({
-                    trackableLink: sdk_1.z.string().describe('URL of the trackable link'),
-                })
+                    validatedAddress: sdk_1.z.string().describe('Validated address'),
+                    portAvailable: sdk_1.z.boolean().describe('Is port available'),
+                }),
             },
-        }
-    },
-    events: {
-        clickedLink: {
-            schema: sdk_1.z.object({
-                conversationId: sdk_1.z.string().describe("ID of the conversation to notify the user"),
-                originalLink: sdk_1.z.string(),
-            })
         },
-    }
+    },
 });
