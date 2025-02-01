@@ -11,6 +11,7 @@
     "@botpress/client": "0.41.0",
     "@botpress/sdk": "2.5.0",
     "axios": "^1.7.9",
+    "free-proxy": "^0.2.1",
     "playwright": "^1.50.0",
     "puppeteer": "^24.1.1",
     "react": "^19.0.0"

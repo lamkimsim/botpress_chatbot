@@ -1,124 +1,150 @@
-const { log } = require('console');
 const { chromium } = require('playwright');
-require('dotenv').config();
-
 const ac = require('@antiadmin/anticaptchaofficial');
 const fs = require('fs');
+require('dotenv').config();
+const axios = require('axios');
 
-//set API key
-ac.setAPIKey(process.env.ANTICAPTCHA_API_KEY);
-
-//Specify softId to earn 10% commission with your app.
-//Get your softId here: https://anti-captcha.com/clients/tools/devcenter
-// ac.setSoftId(0);
-
-//set optional custom parameter which Google made for their search page Recaptcha v2
-// //ac.settings.recaptchaDataSValue = '"data-s" token from Google Search results "protection"'
-
-// ac.solveRecaptchaV2Proxyless('https://partners.unifi.my', 'WEBSITE_KEY')
-// 	.then((gresponse) => {
-// 		console.log('g-response: ' + gresponse);
-// 		console.log('google cookies:');
-// 		console.log(ac.getCookies());
-// 	})
-// 	.catch((error) => console.log('test received error ' + error));
-
+// Configuration
 const config = {
 	loginUrl:
 		'https://partners.unifi.my/HSBBPartnerPortal/HSBBPartnerPortal.portal?_nfpb=true&_pageLabel=login_portal&_nfls=false',
+	selectors: {
+		username: '#portal\\.actionForm_username',
+		password: '#portal\\.actionForm_password',
+		captcha: '#portal\\.actionForm_captchaCode',
+		captchaImage: 'img[src="jcaptchaCustom.jpg"]',
+		loginButton: 'xpath=//*[@id="portal.form"]/table/tbody/tr[8]/td[2]/input',
+	},
 };
 
-// Solve the captcha
-const solveCaptcha = async () => {
+// Solve captcha
+async function solveCaptcha() {
 	try {
 		const captcha = fs.readFileSync('captcha.png', { encoding: 'base64' });
-
-		// Keep your settings
+		ac.setAPIKey(process.env.ANTICAPTCHA_API_KEY);
 		ac.settings.numeric = 2;
-
-		// Await the result
 		const text = await ac.solveImage(captcha, true);
 		return { success: true, text };
 	} catch (error) {
 		return { success: false, error: error.message };
 	}
-};
+}
 
-async function scrapeUnifiPortal() {
-	const browser = await chromium.launch({
-		headless: false, // Set to true in production
-	});
+// Common user agents for rotation
+const userAgents = [
+	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+	'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+	// Add more user agents as needed
+];
 
+async function getRandomUserAgent() {
+	return userAgents[Math.floor(Math.random() * userAgents.length)];
+}
+
+async function setupBrowser() {
 	try {
-		const context = await browser.newContext();
-		const page = await context.newPage();
+		// Configure proxy settings
+		const proxyUrl = 'http://tkaatgym-MY-rotate:mirpnpaajwwd@p.webshare.io:80';
 
-		// Navigate to the login page
-		await page.goto(config.loginUrl);
-
-		// Wait for the username input to be available
-		await page.waitForSelector(
-			'#portal\\.actionForm_username',
-			(timeout = 10000)
-		);
-
-		// Type the username and password
-		await page.fill(
-			'#portal\\.actionForm_username',
-			process.env.UNIFI_USERNAME
-		);
-		await page.fill(
-			'#portal\\.actionForm_password',
-			process.env.UNIFI_PASSWORD
-		);
-
-		// Wait for the image element to be available
-		await page.waitForSelector('img[src="jcaptchaCustom.jpg"]', {
-			timeout: 10000,
+		// Launch browser with proxy configuration
+		const browser = await chromium.launch({
+			proxy: {
+				server: proxyUrl,
+				username: 'tkaatgym-MY-rotate',
+				password: 'mirpnpaajwwd',
+			},
+			headless: false,
 		});
 
-		// Take screenshot of captcha image
-		const element = await page.$('img[src="jcaptchaCustom.jpg"]');
-		if (element) {
-			await element.screenshot({ path: 'captcha.png' });
-			console.log('captcha.png');
-		} else {
-			console.error('Captcha image element not found');
-		}
+		// Create new context with custom headers
+		const context = await browser.newContext({
+			userAgent: await getRandomUserAgent(),
+			extraHTTPHeaders: {
+				Accept:
+					'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+				'Accept-Language': 'en-US,en;q=0.5',
+				'Accept-Encoding': 'gzip, deflate, br',
+				Connection: 'keep-alive',
+				'Cache-Control': 'max-age=0',
+				'Sec-Ch-Ua': '"Chromium";v="91", " Not;A Brand";v="99"',
+				'Sec-Ch-Ua-Mobile': '?0',
+				'Sec-Fetch-Dest': 'document',
+				'Sec-Fetch-Mode': 'navigate',
+				'Sec-Fetch-Site': 'none',
+				'Sec-Fetch-User': '?1',
+				'Upgrade-Insecure-Requests': '1',
+			},
+		});
 
-		// Usage:
-		const result = await solveCaptcha();
-		if (result.success) {
-			console.log('Captcha solved:', result.text);
-		} else {
-			console.log('Error:', result.error);
-		}
-
-		await page.fill(
-			'#portal\\.actionForm_captchaCode',
-			result.text.toUpperCase()
-		);
-
-		// login
-		const loginButton = await page.$(
-			`xpath=//*[@id="portal.form"]/table/tbody/tr[8]/td[2]/input`
-		);
-		await loginButton.click();
-
-		console.log('Successfully logged in');
-
-		return content;
+		return { browser, context };
 	} catch (error) {
-		console.error('Error during scraping:', error);
+		console.error('Error setting up browser:', error);
 		throw error;
-	} finally {
-		await browser.close();
 	}
 }
 
-// Example usage
-scrapeUnifiPortal('CPRV134', 'Ace874$')
-	.then((content) => console.log('Scraping completed'))
-	.catch((error) => console.error('Scraping failed:', error));
+// Update getRotatingProxy function
+async function getRotatingProxy() {
+	try {
+		const response = await axios.get('http://ipv4.webshare.io/', {
+			proxy: false, // Disable axios proxy handling
+			httpsAgent: new (require('https').Agent)({
+				proxy: proxyString,
+			}),
+			timeout: 5000,
+		});
 
-module.exports = scrapeUnifiPortal;
+		console.log('Proxy IP:', response.data);
+		return { success: true, ip: response.data };
+	} catch (error) {
+		console.error('Proxy test failed:', error.message);
+		return { success: false, error: error.message };
+	}
+}
+
+// Main scraping function
+async function scrapeUnifi() {
+	let browser, context;
+
+	try {
+		// Set up browser and context
+		({ browser, context } = await setupBrowser());
+
+		// Create new page
+		const page = await browser.newPage();
+		await page.goto(config.loginUrl, {
+			waitUntil: 'networkidle',
+			timeout: 60000,
+		});
+
+		// Wait for the username input to be available
+		await page.waitForSelector(config.selectors.username);
+
+		// Type the username and password
+		await page.type(config.selectors.username, process.env.UNIFI_USERNAME);
+		await page.type(config.selectors.password, process.env.UNIFI_PASSWORD);
+
+		// Solve captcha
+		const captchaImage = await page.$(config.selectors.captchaImage);
+		await captchaImage.screenshot({ path: 'captcha.png' });
+		const captchaSolution = await solveCaptcha();
+		if (!captchaSolution.success) {
+			throw new Error('Captcha solving failed');
+		}
+		await page.type(config.selectors.captcha, captchaSolution.text);
+
+		// Click the login button
+		await page.click(config.selectors.loginButton);
+
+		console.log('Logged in successfully');
+	} catch (error) {
+		console.error('Error during scraping:', error);
+	} finally {
+		if (browser) {
+			await browser.close();
+		}
+	}
+}
+
+// Run the scraping function
+scrapeUnifi();
