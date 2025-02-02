@@ -1,8 +1,7 @@
 const { chromium } = require('playwright');
-const ac = require('@antiadmin/anticaptchaofficial');
-const fs = require('fs');
 require('dotenv').config();
 const axios = require('axios');
+const { solveCaptchaWithRetries } = require('./captcha');
 
 // Configuration
 const config = {
@@ -16,19 +15,6 @@ const config = {
 		loginButton: 'xpath=//*[@id="portal.form"]/table/tbody/tr[8]/td[2]/input',
 	},
 };
-
-// Solve captcha
-async function solveCaptcha() {
-	try {
-		const captcha = fs.readFileSync('captcha.png', { encoding: 'base64' });
-		ac.setAPIKey(process.env.ANTICAPTCHA_API_KEY);
-		ac.settings.numeric = 2;
-		const text = await ac.solveImage(captcha, true);
-		return { success: true, text };
-	} catch (error) {
-		return { success: false, error: error.message };
-	}
-}
 
 // Common user agents for rotation
 const userAgents = [
@@ -125,16 +111,7 @@ async function scrapeUnifi() {
 		await page.type(config.selectors.password, process.env.UNIFI_PASSWORD);
 
 		// Solve captcha
-		const captchaImage = await page.$(config.selectors.captchaImage);
-		await captchaImage.screenshot({ path: 'captcha.png' });
-		const captchaSolution = await solveCaptcha();
-		if (!captchaSolution.success) {
-			throw new Error('Captcha solving failed');
-		}
-		await page.type(config.selectors.captcha, captchaSolution.text);
-
-		// Click the login button
-		await page.click(config.selectors.loginButton);
+		await solveCaptchaWithRetries(page, config);
 
 		console.log('Logged in successfully');
 	} catch (error) {
