@@ -1,6 +1,7 @@
 import * as sdk from '@botpress/sdk'
 import * as bp from '.botpress'
-const puppeteer = require('puppeteer');
+
+import { scrapeUnifi } from './unifi_scrapper';
 
 export default new bp.Integration({
   register: async () => {
@@ -18,16 +19,24 @@ export default new bp.Integration({
     throw new sdk.RuntimeError('Invalid configuration') // replace this with your own validation logic
   },
   actions: {
+    helloWorld: async ()=>{
+      return {'message': 'Hello World'}
+    },
+
     validateAddress: async ({input}) => {
-
-    
+      console.log(`Validating address: ${input}`)
       const { address } = input
+      console.log(`Validating address: ${address}`)
+      const [error] = scrapeUnifi(address)
+      console.log(`Error: ${error}`)
+      if(error) {
+        return {validatedAddress: address, portAvailable: false, error: error}
+      }
 
-  
       // Randomize between true and false
       const portAvailable = Math.random() >= 0.5
 
-      return { validatedAddress: address, portAvailable: portAvailable }
+      return { validatedAddress: address, portAvailable: portAvailable, error: undefined }
       
     }
   },

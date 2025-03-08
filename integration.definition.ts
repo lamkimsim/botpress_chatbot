@@ -34,6 +34,7 @@ export default new IntegrationDefinition({
         schema: z.object({
           validatedAddress: z.string().describe('Validated address'),
           portAvailable: z.boolean().describe('Is port available'),
+          error: z.string().optional().describe('Error message'),
         }),
       },
     },
